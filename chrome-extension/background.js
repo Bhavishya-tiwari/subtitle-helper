@@ -1,4 +1,4 @@
-const DEFAULT_BACKEND_URL = 'http://localhost:3000';
+const DEFAULT_BACKEND_URL = 'https://subtitle-helper-theta.vercel.app';
 const MAX_TEXT_LENGTH = 500;
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -70,10 +70,16 @@ function sanitizeText(text) {
     .trim();
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
+  const stored = await chrome.storage.local.get(['backendUrl', 'enabled', 'targetLang']);
+  const backendUrl =
+    stored.backendUrl && !stored.backendUrl.includes('localhost')
+      ? stored.backendUrl
+      : DEFAULT_BACKEND_URL;
+
   chrome.storage.local.set({
-    enabled: true,
-    targetLang: 'hi',
-    backendUrl: DEFAULT_BACKEND_URL
+    enabled: stored.enabled !== false,
+    targetLang: stored.targetLang || 'hi',
+    backendUrl
   });
 });

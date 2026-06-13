@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Subtitle Translator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Translate video subtitles in real-time with meaning explanations",
   "permissions": [
     "activeTab",
@@ -10,7 +10,7 @@
   "host_permissions": [
     "https://*.youtube.com/*",
     "https://*.netflix.com/*",
-    "http://localhost:3000/*"
+    "https://subtitle-helper-theta.vercel.app/*"
   ],
   "action": {
     "default_popup": "popup.html",
