@@ -1,4 +1,4 @@
-const DEFAULT_BACKEND_URL = 'https://subtitle-helper-theta.vercel.app';
+const DEFAULT_BACKEND_URL = 'http://localhost:3000';
 
 const toggleEnabled = document.getElementById('toggleEnabled');
 const targetLang = document.getElementById('targetLang');
@@ -10,12 +10,7 @@ let backendUrl = DEFAULT_BACKEND_URL;
 chrome.storage.local.get(['enabled', 'targetLang', 'backendUrl'], (result) => {
   toggleEnabled.checked = result.enabled !== false;
   targetLang.value = result.targetLang || 'hi';
-  const stored = result.backendUrl;
-  backendUrl =
-    stored && !stored.includes('localhost') ? stored : DEFAULT_BACKEND_URL;
-  if (backendUrl !== stored) {
-    chrome.storage.local.set({ backendUrl });
-  }
+  backendUrl = result.backendUrl || DEFAULT_BACKEND_URL;
 });
 
 toggleEnabled.addEventListener('change', () => {
