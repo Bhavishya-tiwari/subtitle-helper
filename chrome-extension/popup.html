@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subtitle Translator</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body class="w-80 bg-gray-900 text-white font-sans overflow-y-auto">
+  <div class="p-3">
+    <div class="flex items-center gap-2 mb-3">
+      <div class="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center text-xs font-bold">ST</div>
+      <h1 class="text-sm font-semibold">Subtitle Translator</h1>
+    </div>
+
+    <div class="card mb-3">
+      <div class="row">
+        <div class="field">
+          <span class="label">Hotkey</span>
+          <kbd class="kbd">'</kbd>
+        </div>
+        <label class="field field-right cursor-pointer">
+          <span class="label">Enable</span>
+          <input type="checkbox" id="toggleEnabled" class="sr-only peer" checked>
+          <div class="toggle relative w-11 h-6 bg-gray-600 rounded-full peer-checked:bg-indigo-500 transition-colors">
+            <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+          </div>
+        </label>
+      </div>
+
+      <div class="row mt-3">
+        <div class="field field-grow">
+          <span class="label">Language</span>
+          <select id="targetLang" class="select bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-indigo-500">
+            <option value="hi">Hindi</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="ja">Japanese</option>
+            <option value="ko">Korean</option>
+            <option value="zh">Chinese</option>
+            <option value="pt">Portuguese</option>
+          </select>
+        </div>
+        <div class="field field-right">
+          <span class="label">&nbsp;</span>
+          <button id="testConnection" class="btn bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1 rounded transition-colors">
+            Test
+          </button>
+        </div>
+      </div>
+      <p id="connectionResult" class="text-xs text-center mt-2 hidden"></p>
+    </div>
+
+    <div class="card">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-gray-300">Analytics</span>
+        <button id="refreshAnalytics" class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-0.5 rounded transition-colors">Refresh</button>
+      </div>
+
+      <div id="analyticsLoading" class="text-xs text-gray-500 hidden">Loading...</div>
+      <div id="analyticsError" class="text-xs text-red-400 hidden"></div>
+
+      <div id="analyticsContent" class="hidden">
+        <div class="grid-3 mb-2 text-center">
+          <div class="stat">
+            <div id="statTotal" class="stat-val text-white">0</div>
+            <div class="stat-label">Total</div>
+          </div>
+          <div class="stat">
+            <div id="statSuccess" class="stat-val text-green-400">0</div>
+            <div class="stat-label">OK</div>
+          </div>
+          <div class="stat">
+            <div id="statFailed" class="stat-val text-red-400">0</div>
+            <div class="stat-label">Fail</div>
+          </div>
+        </div>
+
+        <div class="stat-row mb-2">
+          <span class="text-xs text-gray-500">Avg</span>
+          <span id="statLatency" class="text-xs font-mono text-indigo-300">0 ms</span>
+        </div>
+
+        <div id="byKeySection" class="mb-2 hidden">
+          <p class="section-label">By API Key</p>
+          <div id="byKeyList" class="space-y-1"></div>
+        </div>
+
+        <div id="byLangSection" class="mb-2 hidden">
+          <p class="section-label">By Language</p>
+          <div id="byLangList" class="flex flex-wrap gap-1"></div>
+        </div>
+
+        <div id="byErrorSection" class="hidden">
+          <p class="section-label">Errors</p>
+          <div id="byErrorList" class="space-y-1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
