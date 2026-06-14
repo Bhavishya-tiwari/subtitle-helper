@@ -5,11 +5,16 @@
   let activeRequestId = 0;
 
   const SUBTITLE_SELECTORS = [
-    // YouTube - most specific first
+    // YouTube
     '.ytp-caption-segment',
     // Netflix
     '.player-timedtext-text-container span',
     '[data-uia="player-timedtext"] span',
+    // Amazon Prime Video
+    '.atvwebplayersdk-captions-text',
+    '.timedtext',
+    '[class*="timedtext"] span',
+    '[class*="caption"] [class*="text"]',
     // Generic fallbacks
     '[class*="caption"] span',
     '[class*="subtitle"] span'
@@ -72,12 +77,22 @@
   function getCurrentSubtitle() {
     const isYouTube = location.hostname.includes('youtube.com');
     const isNetflix = location.hostname.includes('netflix.com');
+    const isHotstar = location.hostname.includes('hotstar.com');
+    const isPrimeVideo = location.hostname.includes('primevideo.com');
+
+    if (isHotstar) {
+      return findHotstarSubtitle();
+    }
+
+    if (isNetflix) {
+      return findNetflixSubtitle();
+    }
 
     const selectors = isYouTube
       ? ['.ytp-caption-segment']
-      : isNetflix
-        ? ['.player-timedtext-text-container span', '[data-uia="player-timedtext"] span']
-        : SUBTITLE_SELECTORS;
+      : isPrimeVideo
+          ? ['.atvwebplayersdk-captions-text', '.timedtext', '[class*="timedtext"] span', '[class*="caption"] [class*="text"]']
+          : SUBTITLE_SELECTORS;
 
     for (const selector of selectors) {
       const elements = document.querySelectorAll(selector);
@@ -94,6 +109,57 @@
         return subtitleText;
       }
     }
+    return null;
+  }
+
+  function findNetflixSubtitle() {
+    // Try to find the main subtitle container first
+    const container = document.querySelector('.player-timedtext-text-container, [data-uia="player-timedtext"]');
+    if (!container) return null;
+
+    // Get text from the container directly to avoid duplicates
+    const text = container.textContent?.trim();
+    if (text && text.length > 2) {
+      return text;
+    }
+
+    return null;
+  }
+
+  function findHotstarSubtitle() {
+    const allElements = document.querySelectorAll('div, span, p');
+    const windowHeight = window.innerHeight;
+    const candidates = [];
+
+    Array.from(allElements).forEach(el => {
+      const text = el.textContent?.trim();
+      if (!text || text.length < 3 || text.length > 500) return;
+      if (el.children.length > 0) return;
+      
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      
+      const inSubtitleArea = rect.top > windowHeight * 0.6 && rect.bottom < windowHeight;
+      
+      if (inSubtitleArea) {
+        const style = window.getComputedStyle(el);
+        const fontSize = parseInt(style.fontSize);
+        const isVisible = style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+        
+        if (isVisible && fontSize > 12) {
+          candidates.push({
+            text: text,
+            fontSize: fontSize
+          });
+        }
+      }
+    });
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.fontSize - a.fontSize || b.text.length - a.text.length);
+      return candidates[0].text;
+    }
+
     return null;
   }
 

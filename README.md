@@ -1,6 +1,13 @@
 # Subtitle Translator
 
-Chrome extension that detects YouTube subtitles and shows real-time translations via a Gemini-powered backend.
+Chrome extension that detects video subtitles and shows real-time translations via a Gemini-powered backend.
+
+## Supported Platforms
+
+- YouTube
+- Netflix
+- JioHotstar (Hotstar)
+- Amazon Prime Video
 
 ## Project Structure
 
@@ -46,7 +53,8 @@ Server runs at `http://localhost:3000`.
 3. Click **Load unpacked** → select the `chrome-extension/` folder
 4. Open the extension popup, set backend URL to `http://localhost:3000`
 5. Toggle **Enable Translation** on
-6. Play a YouTube video with captions enabled
+6. Play a video on any supported platform (YouTube, Netflix, Hotstar, or Prime Video) with captions enabled
+7. Press the `'` (single quote) key to translate the current subtitle
 
 ## API Endpoints
 
