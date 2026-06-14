@@ -13,7 +13,7 @@
       <h1 class="text-sm font-semibold">Subtitle Translator</h1>
     </div>
 
-    <div class="card mb-3">
+    <div class="card">
       <div class="row">
         <div class="field">
           <span class="label">Hotkey</span>
@@ -50,53 +50,6 @@
         </div>
       </div>
       <p id="connectionResult" class="text-xs text-center mt-2 hidden"></p>
-    </div>
-
-    <div class="card">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-semibold text-gray-300">Analytics</span>
-        <button id="refreshAnalytics" class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-0.5 rounded transition-colors">Refresh</button>
-      </div>
-
-      <div id="analyticsLoading" class="text-xs text-gray-500 hidden">Loading...</div>
-      <div id="analyticsError" class="text-xs text-red-400 hidden"></div>
-
-      <div id="analyticsContent" class="hidden">
-        <div class="grid-3 mb-2 text-center">
-          <div class="stat">
-            <div id="statTotal" class="stat-val text-white">0</div>
-            <div class="stat-label">Total</div>
-          </div>
-          <div class="stat">
-            <div id="statSuccess" class="stat-val text-green-400">0</div>
-            <div class="stat-label">OK</div>
-          </div>
-          <div class="stat">
-            <div id="statFailed" class="stat-val text-red-400">0</div>
-            <div class="stat-label">Fail</div>
-          </div>
-        </div>
-
-        <div class="stat-row mb-2">
-          <span class="text-xs text-gray-500">Avg</span>
-          <span id="statLatency" class="text-xs font-mono text-indigo-300">0 ms</span>
-        </div>
-
-        <div id="byKeySection" class="mb-2 hidden">
-          <p class="section-label">By API Key</p>
-          <div id="byKeyList" class="space-y-1"></div>
-        </div>
-
-        <div id="byLangSection" class="mb-2 hidden">
-          <p class="section-label">By Language</p>
-          <div id="byLangList" class="flex flex-wrap gap-1"></div>
-        </div>
-
-        <div id="byErrorSection" class="hidden">
-          <p class="section-label">Errors</p>
-          <div id="byErrorList" class="space-y-1"></div>
-        </div>
-      </div>
     </div>
   </div>
 

@@ -41,7 +41,8 @@
       if (message.action === 'translationError') {
         if (message.requestId !== activeRequestId) return;
         isTranslating = false;
-        showToast('Translation failed. Is the backend running?');
+        hideOverlay();
+        showToast('Translation failed. Check backend is running.');
       }
     });
   }
@@ -69,7 +70,16 @@
   }
 
   function getCurrentSubtitle() {
-    for (const selector of SUBTITLE_SELECTORS) {
+    const isYouTube = location.hostname.includes('youtube.com');
+    const isNetflix = location.hostname.includes('netflix.com');
+
+    const selectors = isYouTube
+      ? ['.ytp-caption-segment']
+      : isNetflix
+        ? ['.player-timedtext-text-container span', '[data-uia="player-timedtext"] span']
+        : SUBTITLE_SELECTORS;
+
+    for (const selector of selectors) {
       const elements = document.querySelectorAll(selector);
       if (elements.length === 0) continue;
 
@@ -77,7 +87,6 @@
         .map(el => el.textContent.trim())
         .filter(t => t.length > 0);
 
-      // Deduplicate while preserving order
       const unique = [...new Set(texts)];
       const subtitleText = unique.join(' ');
 
@@ -99,13 +108,31 @@
 
     isTranslating = true;
     activeRequestId += 1;
+    const requestId = activeRequestId;
     showLoadingOverlay(subtitleText);
 
-    chrome.runtime.sendMessage({
-      action: 'translate',
-      text: subtitleText,
-      requestId: activeRequestId
-    });
+    const timeoutId = setTimeout(() => {
+      if (isTranslating && requestId === activeRequestId) {
+        isTranslating = false;
+        showToast('Translation timed out. Reload the extension and try again.');
+      }
+    }, 20000);
+
+    chrome.runtime.sendMessage(
+      {
+        action: 'translate',
+        text: subtitleText,
+        requestId
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          clearTimeout(timeoutId);
+          isTranslating = false;
+          showToast('Extension error. Reload extension and refresh this tab.');
+          console.error(chrome.runtime.lastError.message);
+        }
+      }
+    );
   }
 
   function getOverlayContainer() {

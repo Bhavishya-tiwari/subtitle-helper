@@ -9,18 +9,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleTranslate(text, tabId, requestId) {
-  if (!text || typeof text !== 'string') return;
+  const notifyError = () => {
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, { action: 'translationError', requestId });
+    }
+  };
+
+  if (!text || typeof text !== 'string') {
+    notifyError();
+    return;
+  }
+
   if (text.length > MAX_TEXT_LENGTH) {
     text = text.slice(0, MAX_TEXT_LENGTH);
   }
 
   const config = await chrome.storage.local.get(['backendUrl', 'targetLang', 'enabled']);
 
-  if (config.enabled === false) return;
+  if (config.enabled === false) {
+    notifyError();
+    return;
+  }
 
   const backendUrl = config.backendUrl || DEFAULT_BACKEND_URL;
   const targetLang = config.targetLang || 'hi';
   const originalText = sanitizeText(text);
+
+  if (!originalText) {
+    notifyError();
+    return;
+  }
 
   try {
     const response = await fetch(`${backendUrl}/api/translate`, {
@@ -36,15 +54,15 @@ async function handleTranslate(text, tabId, requestId) {
 
     if (!response.ok) {
       console.error('Translation API error:', response.status);
-      if (tabId) {
-        chrome.tabs.sendMessage(tabId, { action: 'translationError', requestId });
-      }
+      notifyError();
       return;
     }
 
     const data = await response.json();
 
-    if (tabId && data.translation) {
+    if (!tabId) return;
+
+    if (data.translation) {
       chrome.tabs.sendMessage(tabId, {
         action: 'translationResult',
         requestId,
@@ -54,12 +72,12 @@ async function handleTranslate(text, tabId, requestId) {
           meaning: data.meaning || ''
         }
       });
+    } else {
+      notifyError();
     }
   } catch (err) {
     console.error('Translation request failed:', err.message);
-    if (tabId) {
-      chrome.tabs.sendMessage(tabId, { action: 'translationError', requestId });
-    }
+    notifyError();
   }
 }
 

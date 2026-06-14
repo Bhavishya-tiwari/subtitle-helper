@@ -4,6 +4,5 @@
 
 backend/node_modules/
 backend/.next/
-backend/analytics.json
 
 .DS_Store

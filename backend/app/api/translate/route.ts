@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { record } from '@/lib/analytics';
 import { getNextApiKey } from '@/lib/gemini-keys';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import {
   ALLOWED_LANGUAGES,
-  GEMINI_MODEL,
   MAX_TEXT_LENGTH,
   TargetLang,
-  classifyError,
   sanitizeInput,
   translateSubtitle
 } from '@/lib/translate';
@@ -51,38 +48,9 @@ export async function POST(request: NextRequest) {
     }
 
     const sanitizedText = sanitizeInput(text);
-    const startTime = Date.now();
+    const result = await translateSubtitle(sanitizedText, targetLang as TargetLang, apiKeyInfo.key);
 
-    try {
-      const result = await translateSubtitle(sanitizedText, targetLang as TargetLang, apiKeyInfo.key);
-      const latencyMs = Date.now() - startTime;
-
-      record({
-        keyLabel: apiKeyInfo.label,
-        model: GEMINI_MODEL,
-        targetLang: targetLang as string,
-        inputLength: sanitizedText.length,
-        success: true,
-        latencyMs
-      });
-
-      return NextResponse.json(result);
-    } catch (geminiErr) {
-      const latencyMs = Date.now() - startTime;
-      const message = geminiErr instanceof Error ? geminiErr.message : 'Unknown error';
-
-      record({
-        keyLabel: apiKeyInfo.label,
-        model: GEMINI_MODEL,
-        targetLang: targetLang as string,
-        inputLength: sanitizedText.length,
-        success: false,
-        errorType: classifyError(message),
-        latencyMs
-      });
-
-      throw geminiErr;
-    }
+    return NextResponse.json(result);
   } catch (err) {
     console.error('Translation error:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'Translation failed' }, { status: 500 });

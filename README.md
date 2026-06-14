@@ -15,9 +15,8 @@ subtitle-translator/
 └── backend/              # Next.js API-only server
     ├── app/api/
     │   ├── health/       # GET /api/health
-    │   ├── translate/    # POST /api/translate
-    │   └── analytics/    # GET /api/analytics
-    └── lib/              # Shared logic (translate, auth stub, analytics)
+    │   └── translate/    # POST /api/translate
+    └── lib/              # Shared logic (translate, auth stub)
 ```
 
 ## Setup
