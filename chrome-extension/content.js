@@ -15,6 +15,8 @@
     '.timedtext',
     '[class*="timedtext"] span',
     '[class*="caption"] [class*="text"]',
+    // Sony LIV
+    '.text-track-cue',
     // Generic fallbacks
     '[class*="caption"] span',
     '[class*="subtitle"] span'
@@ -53,9 +55,10 @@
   }
 
   function onHotkey(e) {
+    if (e.key !== "'" && e.code !== 'Quote') return;
+    
     if (!enabled) return;
     if (isEditableElement(document.activeElement)) return;
-    if (e.key !== "'" && e.code !== 'Quote') return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -74,11 +77,32 @@
     return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
   }
 
+  function isExtensionElement(el) {
+    if (!el) return false;
+    
+    // Check if element itself is extension UI
+    if (el.id === 'subtitle-translator-overlay') return true;
+    if (el.hasAttribute && el.hasAttribute('data-subtitle-helper')) return true;
+    if (el.className && typeof el.className === 'string' && el.className.includes('st-')) return true;
+    
+    // Check if any ancestor is extension UI
+    let parent = el.parentElement;
+    while (parent) {
+      if (parent.id === 'subtitle-translator-overlay') return true;
+      if (parent.hasAttribute && parent.hasAttribute('data-subtitle-helper')) return true;
+      if (parent.className && typeof parent.className === 'string' && parent.className.includes('st-')) return true;
+      parent = parent.parentElement;
+    }
+    
+    return false;
+  }
+
   function getCurrentSubtitle() {
     const isYouTube = location.hostname.includes('youtube.com');
     const isNetflix = location.hostname.includes('netflix.com');
     const isHotstar = location.hostname.includes('hotstar.com');
     const isPrimeVideo = location.hostname.includes('primevideo.com');
+    const isSonyLiv = location.hostname.includes('sonyliv.com');
 
     if (isHotstar) {
       return findHotstarSubtitle();
@@ -86,6 +110,10 @@
 
     if (isNetflix) {
       return findNetflixSubtitle();
+    }
+
+    if (isSonyLiv) {
+      return findSonyLivSubtitle();
     }
 
     const selectors = isYouTube
@@ -99,6 +127,7 @@
       if (elements.length === 0) continue;
 
       const texts = Array.from(elements)
+        .filter(el => !isExtensionElement(el))
         .map(el => el.textContent.trim())
         .filter(t => t.length > 0);
 
@@ -132,6 +161,9 @@
     const candidates = [];
 
     Array.from(allElements).forEach(el => {
+      // Skip extension UI elements
+      if (isExtensionElement(el)) return;
+      
       const text = el.textContent?.trim();
       if (!text || text.length < 3 || text.length > 500) return;
       if (el.children.length > 0) return;
@@ -158,6 +190,43 @@
     if (candidates.length > 0) {
       candidates.sort((a, b) => b.fontSize - a.fontSize || b.text.length - a.text.length);
       return candidates[0].text;
+    }
+
+    return null;
+  }
+
+  function findSonyLivSubtitle() {
+    // Sony LIV uses text-track-cue for subtitles
+    const textTrackCue = document.querySelector('.text-track-cue');
+    if (textTrackCue) {
+      const text = textTrackCue.textContent?.trim();
+      if (text && text.length > 2) {
+        return text;
+      }
+    }
+
+    // Fallback: Try Bitmovin player selectors
+    const specificSelectors = [
+      '.bitmovinplayer-subtitle-text',
+      '[class*="subtitle-text"]',
+      '.bmpui-ui-subtitle-label'
+    ];
+
+    for (const selector of specificSelectors) {
+      const elements = document.querySelectorAll(selector);
+      if (elements.length > 0) {
+        const texts = Array.from(elements)
+          .filter(el => !isExtensionElement(el))
+          .map(el => el.textContent.trim())
+          .filter(t => t.length > 0);
+        
+        const unique = [...new Set(texts)];
+        const subtitleText = unique.join(' ');
+        
+        if (subtitleText.length > 2) {
+          return subtitleText;
+        }
+      }
     }
 
     return null;
@@ -232,6 +301,7 @@
 
     overlayElement = document.createElement('div');
     overlayElement.id = 'subtitle-translator-overlay';
+    overlayElement.setAttribute('data-subtitle-helper', 'true');
     container.appendChild(overlayElement);
     return overlayElement;
   }
@@ -268,6 +338,7 @@
     const container = getOverlayContainer();
     const toast = document.createElement('div');
     toast.className = 'st-toast';
+    toast.setAttribute('data-subtitle-helper', 'true');
     toast.textContent = message;
     container.appendChild(toast);
 

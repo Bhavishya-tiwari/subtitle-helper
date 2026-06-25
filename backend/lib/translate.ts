@@ -30,6 +30,10 @@ export function sanitizeInput(text: string): string {
     .slice(0, MAX_TEXT_LENGTH);
 }
 
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function translateSubtitle(text: string, targetLang: TargetLang, apiKey: string): Promise<TranslationResult> {
   const langName = LANGUAGE_NAMES[targetLang] || targetLang;
 
@@ -49,33 +53,63 @@ Tasks:
 Reply ONLY as JSON:
 {"translation": "...", "context": "...", "terms": [{"phrase": "...", "meaning": "..."}]}`;
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 256
+  const maxRetries = 3;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 256
+            }
+          })
         }
-      })
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        const isRetryable = response.status === 503 || response.status === 429 || response.status >= 500;
+        
+        if (isRetryable && attempt < maxRetries - 1) {
+          const backoffMs = Math.min(1000 * Math.pow(2, attempt), 5000);
+          console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${backoffMs}ms (status: ${response.status})`);
+          await sleep(backoffMs);
+          lastError = new Error(`Gemini API error ${response.status}: ${errorBody}`);
+          continue;
+        }
+        
+        throw new Error(`Gemini API error ${response.status}: ${errorBody}`);
+      }
+
+      const data = await response.json();
+      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!responseText) {
+        throw new Error('Empty response from Gemini');
+      }
+
+      return parseGeminiResponse(responseText);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      if (attempt < maxRetries - 1) {
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt), 5000);
+        console.log(`Network error, retry attempt ${attempt + 1}/${maxRetries} after ${backoffMs}ms`);
+        await sleep(backoffMs);
+        continue;
+      }
+      
+      throw lastError;
     }
-  );
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Gemini API error ${response.status}: ${errorBody}`);
   }
 
-  const data = await response.json();
-  const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!responseText) {
-    throw new Error('Empty response from Gemini');
-  }
-
-  return parseGeminiResponse(responseText);
+  throw lastError || new Error('Translation failed after retries');
 }
 
 function parseGeminiResponse(responseText: string): TranslationResult {

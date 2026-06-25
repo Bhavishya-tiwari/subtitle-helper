@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Subtitle Translator",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Translate video subtitles in real-time with meaning explanations",
   "permissions": [
     "activeTab",
@@ -12,6 +12,7 @@
     "https://*.netflix.com/*",
     "https://*.hotstar.com/*",
     "https://*.primevideo.com/*",
+    "https://*.sonyliv.com/*",
     "https://subtitle-helper-theta.vercel.app/*",
     "http://localhost:3000/*"
   ],
@@ -32,7 +33,8 @@
         "https://*.youtube.com/*",
         "https://*.netflix.com/*",
         "https://*.hotstar.com/*",
-        "https://*.primevideo.com/*"
+        "https://*.primevideo.com/*",
+        "https://*.sonyliv.com/*"
       ],
       "js": ["content.js"],
       "css": ["styles.css"]
