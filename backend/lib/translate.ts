@@ -2,7 +2,7 @@ export const ALLOWED_LANGUAGES = ['hi', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'pt'
 export type TargetLang = (typeof ALLOWED_LANGUAGES)[number];
 
 export const MAX_TEXT_LENGTH = 500;
-export const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+export const GEMINI_MODEL = 'gemini-3.1-flash-lite';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   hi: 'Hindi',
@@ -37,21 +37,18 @@ async function sleep(ms: number): Promise<void> {
 export async function translateSubtitle(text: string, targetLang: TargetLang, apiKey: string): Promise<TranslationResult> {
   const langName = LANGUAGE_NAMES[targetLang] || targetLang;
 
-  const prompt = `You help users understand video subtitles. The subtitle may be in any language.
+  const prompt = `Translate this subtitle to ${langName} and explain difficult words.
 
 INPUT_START
 ${text}
 INPUT_END
 
-The user's preferred language is ${langName}.
-
 Tasks:
-1. If the subtitle is NOT already in ${langName}, translate it naturally into ${langName}.
-2. If the subtitle is ALREADY in ${langName}, use the original text as the translation.
-3. Identify complex or uncommon words/phrases in the original subtitle and briefly explain each in ${langName}. Use [] if none.
+1. Translate to ${langName} (or use original if already in ${langName})
+2. List difficult/uncommon words with brief meanings in ${langName}. Use [] if none.
 
 Reply ONLY as JSON:
-{"translation": "...", "context": "...", "terms": [{"phrase": "...", "meaning": "..."}]}`;
+{"translation": "...", "terms": [{"word": "...", "meaning": "..."}]}`;
 
   const maxRetries = 3;
   let lastError: Error | null = null;
@@ -67,7 +64,7 @@ Reply ONLY as JSON:
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.3,
-              maxOutputTokens: 256
+              maxOutputTokens: 150
             }
           })
         }
@@ -118,18 +115,15 @@ function parseGeminiResponse(responseText: string): TranslationResult {
     try {
       const parsed = JSON.parse(jsonMatch[0]) as {
         translation?: string;
-        context?: string;
         terms?: Array<{ phrase?: string; word?: string; meaning?: string }>;
-        words?: Array<{ phrase?: string; word?: string; meaning?: string }>;
       };
 
-      const terms = Array.isArray(parsed.terms) ? parsed.terms : parsed.words || [];
-      const context = validateOutput(parsed.context);
+      const terms = Array.isArray(parsed.terms) ? parsed.terms : [];
       const termMeanings = terms
         .filter(t => (t.phrase || t.word) && t.meaning)
         .map(t => `${t.phrase || t.word}: ${t.meaning}`)
         .join(' | ');
-      const notes = [context ? `Context: ${context}` : '', termMeanings].filter(Boolean).join(' | ');
+      const notes = termMeanings;
 
       return {
         translation: validateOutput(parsed.translation) || 'Translation unavailable',
