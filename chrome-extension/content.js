@@ -3,6 +3,8 @@
   let overlayElement = null;
   let isTranslating = false;
   let activeRequestId = 0;
+  let subtitlesHidden = false;
+  let subtitleHideStyleEl = null;
 
   const SUBTITLE_SELECTORS = [
     // YouTube
@@ -56,19 +58,58 @@
 
   function onHotkey(e) {
     if (e.key !== "'" && e.code !== 'Quote') return;
-    
     if (!enabled) return;
     if (isEditableElement(document.activeElement)) return;
 
     e.preventDefault();
     e.stopPropagation();
 
-    if (isOverlayVisible()) {
-      hideOverlay();
-      return;
-    }
+    const isNetflix = location.hostname.includes('netflix.com');
 
-    triggerTranslation();
+    if (isNetflix) {
+      // 3-state cycle: hidden → visible → translated → hidden
+      if (isOverlayVisible()) {
+        hideOverlay();
+        hideNetflixSubtitles();
+        return;
+      }
+      if (subtitlesHidden) {
+        showNetflixSubtitles();
+        return;
+      }
+      triggerTranslation();
+    } else {
+      // Other sites: simple translate / close toggle
+      if (isOverlayVisible()) {
+        hideOverlay();
+        return;
+      }
+      triggerTranslation();
+    }
+  }
+
+  function hideNetflixSubtitles() {
+    if (subtitlesHidden) return;
+    subtitlesHidden = true;
+    if (!subtitleHideStyleEl) {
+      subtitleHideStyleEl = document.createElement('style');
+      subtitleHideStyleEl.setAttribute('data-subtitle-helper', 'true');
+    }
+    subtitleHideStyleEl.textContent = `
+      .player-timedtext-text-container,
+      [data-uia="player-timedtext"] {
+        visibility: hidden !important;
+      }
+    `;
+    document.head.appendChild(subtitleHideStyleEl);
+  }
+
+  function showNetflixSubtitles() {
+    if (!subtitlesHidden) return;
+    subtitlesHidden = false;
+    if (subtitleHideStyleEl && subtitleHideStyleEl.parentNode) {
+      subtitleHideStyleEl.parentNode.removeChild(subtitleHideStyleEl);
+    }
   }
 
   function isEditableElement(el) {
