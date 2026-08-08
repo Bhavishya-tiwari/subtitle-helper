@@ -44,14 +44,14 @@ npm install
 npm run dev
 ```
 
-Server runs at `http://localhost:3000`.
+Server runs at `http://localhost:9333`.
 
 ### 3. Load the Chrome Extension
 
 1. Open `chrome://extensions/`
 2. Enable **Developer mode**
 3. Click **Load unpacked** → select the `chrome-extension/` folder
-4. Open the extension popup, set backend URL to `http://localhost:3000`
+4. Open the extension popup, set backend URL to `http://localhost:9333`
 5. Toggle **Enable Translation** on
 6. Play a video on any supported platform (YouTube, Netflix, Hotstar, or Prime Video) with captions enabled
 7. Press the `'` (single quote) key to translate the current subtitle

@@ -14,7 +14,7 @@
     "https://*.primevideo.com/*",
     "https://*.sonyliv.com/*",
     "https://subtitle-helper-theta.vercel.app/*",
-    "http://localhost:3000/*"
+    "http://localhost:9333/*"
   ],
   "action": {
     "default_popup": "popup.html",

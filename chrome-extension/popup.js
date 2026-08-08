@@ -1,4 +1,4 @@
-const DEFAULT_BACKEND_URL = 'http://localhost:3000';
+const DEFAULT_BACKEND_URL = 'http://localhost:9333';
 
 const toggleEnabled = document.getElementById('toggleEnabled');
 const targetLang = document.getElementById('targetLang');

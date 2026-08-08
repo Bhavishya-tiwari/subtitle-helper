@@ -1,4 +1,4 @@
-const DEFAULT_BACKEND_URL = 'http://localhost:3000';
+const DEFAULT_BACKEND_URL = 'http://localhost:9333';
 const MAX_TEXT_LENGTH = 500;
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
