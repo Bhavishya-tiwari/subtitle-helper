@@ -94,14 +94,16 @@ Reply ONLY as JSON:
       return parseGeminiResponse(responseText);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      
-      if (attempt < maxRetries - 1) {
+      const retryable = /Gemini API error (429|503|[5]\d\d)/.test(lastError.message)
+        || !lastError.message.includes('Gemini API error');
+
+      if (retryable && attempt < maxRetries - 1) {
         const backoffMs = Math.min(1000 * Math.pow(2, attempt), 5000);
-        console.log(`Network error, retry attempt ${attempt + 1}/${maxRetries} after ${backoffMs}ms`);
+        console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${backoffMs}ms`);
         await sleep(backoffMs);
         continue;
       }
-      
+
       throw lastError;
     }
   }
