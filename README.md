@@ -1,6 +1,6 @@
 # Subtitle Translator
 
-![Subtitle Translator demo](docs/demo.mp4)
+![Subtitle Translator demo](docs/demo.gif)
 
 Chrome extension that detects on-screen captions and translates them on demand. Press `'` while a video is playing to see a translation and a short meaning note.
 
