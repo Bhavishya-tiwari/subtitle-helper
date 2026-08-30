@@ -14,12 +14,17 @@ export function getSupabaseAnon() {
   return createClient(url, anonKey);
 }
 
+export function getBearerToken(request: Request): string | null {
+  const header = request.headers.get('authorization') || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  return token || null;
+}
+
 export async function getUserFromRequest(request: Request): Promise<User | null> {
   const supabase = getSupabaseAnon();
   if (!supabase) return null;
 
-  const header = request.headers.get('authorization') || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  const token = getBearerToken(request);
   if (!token) return null;
 
   const { data, error } = await supabase.auth.getUser(token);

@@ -58,6 +58,9 @@ async function handleTranslate(text, tabId, requestId) {
       if (data.error === 'Sign in required') {
         return fail(tabId, requestId, 'Sign in from the extension popup');
       }
+      if (data.error === 'Daily translation limit reached') {
+        return fail(tabId, requestId, data.error);
+      }
       if (!data.translation) {
         lastError = data.error || 'Backend returned no translation';
         continue;
@@ -147,6 +150,14 @@ async function postTranslate(backendUrl, text, targetLang, accessToken) {
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
       throw new Error('401');
+    }
+    if (response.status === 429) {
+      return {
+        error: data.error || 'Daily translation limit reached',
+        used: data.used,
+        limit: data.limit,
+        remaining: data.remaining
+      };
     }
     if (!response.ok) {
       throw new Error(data.error || `Backend ${response.status}`);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest, isAuthConfigured } from '@/lib/supabase';
+import { consumeAiQuota, secondsUntilUtcMidnight } from '@/lib/rate-limit';
+import { getBearerToken, getUserFromRequest, isAuthConfigured } from '@/lib/supabase';
 import {
   ALLOWED_LANGUAGES,
   MAX_TEXT_LENGTH,
@@ -23,9 +24,11 @@ function publicErrorDetail(err: unknown): string {
 
 export async function POST(request: NextRequest) {
   try {
+    let accessToken: string | null = null;
     if (isAuthConfigured()) {
       const user = await getUserFromRequest(request);
-      if (!user) {
+      accessToken = getBearerToken(request);
+      if (!user || !accessToken) {
         return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
       }
     }
@@ -54,6 +57,34 @@ export async function POST(request: NextRequest) {
     const apiKey = getApiKey();
     if (!apiKey) {
       return NextResponse.json({ error: 'Translation service not configured' }, { status: 503 });
+    }
+
+    if (accessToken) {
+      let quota;
+      try {
+        quota = await consumeAiQuota(accessToken);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (/consume_ai_quota|Could not find the function/i.test(message)) {
+          return NextResponse.json({ error: 'Rate limit is not configured' }, { status: 503 });
+        }
+        throw err;
+      }
+
+      if (!quota.allowed) {
+        return NextResponse.json(
+          {
+            error: 'Daily translation limit reached',
+            used: quota.used,
+            limit: quota.limit,
+            remaining: 0
+          },
+          {
+            status: 429,
+            headers: { 'Retry-After': String(secondsUntilUtcMidnight()) }
+          }
+        );
+      }
     }
 
     const result = await translateSubtitle(sanitizeInput(text), targetLang as TargetLang, apiKey);
