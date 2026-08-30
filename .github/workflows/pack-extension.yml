@@ -1,0 +1,76 @@
+name: Pack extension
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  pack-extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write production config
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          python3 << 'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path("chrome-extension/config.js")
+          text = path.read_text()
+          text = text.replace(
+              "export const NODE_ENV = 'development'",
+              "export const NODE_ENV = 'production'",
+          )
+          if "export const NODE_ENV = 'production'" not in text:
+              raise SystemExit("Failed to set NODE_ENV to production")
+
+          url = os.environ.get("SUPABASE_URL", "").strip()
+          key = os.environ.get("SUPABASE_ANON_KEY", "").strip()
+          if url:
+              text = re.sub(
+                  r"export const SUPABASE_URL = '[^']*'",
+                  f"export const SUPABASE_URL = '{url}'",
+                  text,
+                  count=1,
+              )
+          if key:
+              text = re.sub(
+                  r"export const SUPABASE_ANON_KEY = '[^']*'",
+                  f"export const SUPABASE_ANON_KEY = '{key}'",
+                  text,
+                  count=1,
+              )
+
+          path.write_text(text)
+          print("config.js is production")
+          PY
+
+      - name: Zip extension
+        run: |
+          cd chrome-extension
+          zip -r ../subtitle-translator.zip . -x '*.DS_Store'
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: subtitle-translator
+          path: subtitle-translator.zip
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: extension-latest
+          name: Subtitle Translator
+          files: subtitle-translator.zip
+          make_latest: true
+          body: |
+            Production Chrome extension. Unzip, then Chrome → Extensions → Load unpacked.
+            Login and translate go to https://subtitle-helper-theta.vercel.app.

@@ -152,13 +152,11 @@ Keep `NODE_ENV = 'development'` in `config.js` for local work.
 
 ## Sharing the extension
 
-In `chrome-extension/config.js`:
+Keep `NODE_ENV = 'development'` in git. A [GitHub Action](.github/workflows/pack-extension.yml) on every push to `main` flips it to `production` on the runner only, zips `chrome-extension/`, and publishes `subtitle-translator.zip` on the **extension-latest** release.
 
-```js
-export const NODE_ENV = 'production';
-```
+Download: **Releases → Subtitle Translator → `subtitle-translator.zip`**. Unzip, then Chrome → Extensions → Load unpacked.
 
-Zip `chrome-extension/`. Production traffic goes to `https://subtitle-helper-theta.vercel.app`.
+Optional repo secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) override the values in `config.js` for that zip. If they are unset, the committed public keys are used. Production traffic goes to `https://subtitle-helper-theta.vercel.app`.
 
 ## API
 
