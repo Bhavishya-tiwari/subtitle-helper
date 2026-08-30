@@ -1,5 +1,7 @@
 # Subtitle Translator
 
+![Subtitle Translator demo](docs/demo.mp4)
+
 Chrome extension that detects on-screen captions and translates them on demand. Press `'` while a video is playing to see a translation and a short meaning note.
 
 Translations run through a Gemini-powered Next.js backend. Google sign-in is handled by Supabase on the backend site, not inside the extension.
