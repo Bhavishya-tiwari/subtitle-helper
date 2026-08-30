@@ -2,10 +2,18 @@ import {
   BACKEND_URLS,
   DEFAULT_TARGET_LANG,
   FETCH_TIMEOUT_MS,
-  MAX_TEXT_LENGTH
+  MAX_TEXT_LENGTH,
+  SUPABASE_ANON_KEY,
+  SUPABASE_URL
 } from './config.js';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'authSession' && message.session) {
+    chrome.storage.local.set({ session: message.session });
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (message.action !== 'translate') {
     return false;
   }
@@ -26,7 +34,7 @@ async function handleTranslate(text, tabId, requestId) {
     text = text.slice(0, MAX_TEXT_LENGTH);
   }
 
-  const config = await chrome.storage.local.get(['targetLang', 'enabled']);
+  const config = await chrome.storage.local.get(['targetLang', 'enabled', 'session']);
   if (config.enabled === false) {
     return fail(tabId, requestId, 'Translation is disabled');
   }
@@ -36,14 +44,22 @@ async function handleTranslate(text, tabId, requestId) {
     return fail(tabId, requestId, 'Subtitle text was empty');
   }
 
+  const accessToken = await getAccessToken(config.session);
+  if (SUPABASE_URL && SUPABASE_ANON_KEY && !accessToken) {
+    return fail(tabId, requestId, 'Sign in from the extension popup');
+  }
+
   const targetLang = config.targetLang || DEFAULT_TARGET_LANG;
   let lastError = 'Cannot reach backend';
 
   for (const backendUrl of BACKEND_URLS) {
     try {
-      const data = await postTranslate(backendUrl, originalText, targetLang);
+      const data = await postTranslate(backendUrl, originalText, targetLang, accessToken);
+      if (data.error === 'Sign in required') {
+        return fail(tabId, requestId, 'Sign in from the extension popup');
+      }
       if (!data.translation) {
-        lastError = 'Backend returned no translation';
+        lastError = data.error || 'Backend returned no translation';
         continue;
       }
 
@@ -59,6 +75,9 @@ async function handleTranslate(text, tabId, requestId) {
       return result;
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
+      if (lastError.includes('401')) {
+        return fail(tabId, requestId, 'Sign in from the extension popup');
+      }
       console.error('Translation request failed:', lastError);
     }
   }
@@ -66,23 +85,74 @@ async function handleTranslate(text, tabId, requestId) {
   return fail(tabId, requestId, lastError);
 }
 
-async function postTranslate(backendUrl, text, targetLang) {
+async function getAccessToken(session) {
+  if (!session?.access_token) return null;
+
+  const expiresAtMs = (session.expires_at || 0) * 1000;
+  if (expiresAtMs && Date.now() < expiresAtMs - 60_000) {
+    return session.access_token;
+  }
+
+  if (!session.refresh_token || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return session.access_token;
+  }
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ refresh_token: session.refresh_token })
+    });
+
+    if (!response.ok) {
+      await chrome.storage.local.remove('session');
+      return null;
+    }
+
+    const data = await response.json();
+    const nextSession = {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token || session.refresh_token,
+      expires_at: data.expires_at,
+      user: session.user
+    };
+    await chrome.storage.local.set({ session: nextSession });
+    return nextSession.access_token;
+  } catch {
+    return session.access_token;
+  }
+}
+
+async function postTranslate(backendUrl, text, targetLang, accessToken) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+
     const response = await fetch(`${backendUrl}/api/translate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ text, targetLang }),
       signal: controller.signal
     });
 
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      throw new Error('401');
+    }
     if (!response.ok) {
-      throw new Error(`Backend ${response.status}`);
+      throw new Error(data.error || `Backend ${response.status}`);
     }
 
-    return response.json();
+    return data;
   } catch (err) {
     if (err && err.name === 'AbortError') {
       throw new Error('Backend timed out');

@@ -13,6 +13,30 @@
       <h1 class="text-sm font-semibold">Subtitle Translator</h1>
     </div>
 
+    <div id="authCard" class="card mb-3">
+      <div id="signedOut" class="hidden">
+        <p class="text-xs text-center text-gray-400 mb-2">Sign in to translate subtitles</p>
+        <button id="signIn" class="btn w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1 rounded transition-colors">
+          Sign in with Google
+        </button>
+        <p id="authError" class="text-xs text-center mt-2 text-red-400 hidden"></p>
+      </div>
+      <div id="signedIn" class="hidden">
+        <div class="row">
+          <div class="field field-grow">
+            <span class="label">Signed in</span>
+            <p id="userEmail" class="text-xs text-gray-300 truncate"></p>
+          </div>
+          <div class="field field-right">
+            <span class="label">&nbsp;</span>
+            <button id="signOut" class="btn bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium px-3 py-1 rounded transition-colors">
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="row">
         <div class="field">

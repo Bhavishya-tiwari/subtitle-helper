@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest, isAuthConfigured } from '@/lib/supabase';
 import {
   ALLOWED_LANGUAGES,
   MAX_TEXT_LENGTH,
@@ -22,6 +23,13 @@ function publicErrorDetail(err: unknown): string {
 
 export async function POST(request: NextRequest) {
   try {
+    if (isAuthConfigured()) {
+      const user = await getUserFromRequest(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
+      }
+    }
+
     const body = await request.json();
     const { text, targetLang } = body as { text?: unknown; targetLang?: unknown };
 

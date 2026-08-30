@@ -13,6 +13,7 @@
     "https://*.hotstar.com/*",
     "https://*.primevideo.com/*",
     "https://*.sonyliv.com/*",
+    "https://*.supabase.co/*",
     "https://subtitle-helper-theta.vercel.app/*",
     "http://localhost:9333/*",
     "http://127.0.0.1:9333/*"
@@ -40,6 +41,15 @@
       ],
       "js": ["content.js"],
       "css": ["styles.css"]
+    },
+    {
+      "matches": [
+        "https://subtitle-helper-theta.vercel.app/auth/*",
+        "http://localhost:9333/auth/*",
+        "http://127.0.0.1:9333/auth/*"
+      ],
+      "js": ["auth-bridge.js"],
+      "run_at": "document_idle"
     }
   ],
   "icons": {
