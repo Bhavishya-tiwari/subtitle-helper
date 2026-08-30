@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getNextApiKey } from '@/lib/gemini-keys';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import {
   ALLOWED_LANGUAGES,
   MAX_TEXT_LENGTH,
@@ -9,17 +7,12 @@ import {
   translateSubtitle
 } from '@/lib/translate';
 
+function getApiKey(): string | null {
+  const key = process.env.GEMINI_API_KEY?.trim();
+  return key || null;
+}
+
 export async function POST(request: NextRequest) {
-  const ip = getClientIp(request);
-  const rate = checkRateLimit(ip);
-
-  if (!rate.allowed) {
-    return NextResponse.json(
-      { error: 'Too many requests, please try again later' },
-      { status: 429, headers: rate.retryAfterSec ? { 'Retry-After': String(rate.retryAfterSec) } : undefined }
-    );
-  }
-
   try {
     const body = await request.json();
     const { text, targetLang } = body as { text?: unknown; targetLang?: unknown };
@@ -42,34 +35,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Retry with different API keys on failure
-    const maxAttempts = 2;
-    let lastError: Error | null = null;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const apiKeyInfo = getNextApiKey();
-      if (!apiKeyInfo) {
-        return NextResponse.json({ error: 'Translation service not configured' }, { status: 503 });
-      }
-
-      try {
-        const sanitizedText = sanitizeInput(text);
-        const result = await translateSubtitle(sanitizedText, targetLang as TargetLang, apiKeyInfo.key);
-        return NextResponse.json(result);
-      } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
-        console.error(`Translation attempt ${attempt + 1}/${maxAttempts} failed:`, err instanceof Error ? err.message : err);
-        
-        // If it's a 503 or 429 and we have more attempts, try with next key
-        if (attempt < maxAttempts - 1 && lastError.message.includes('503')) {
-          continue;
-        }
-        
-        throw lastError;
-      }
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Translation service not configured' }, { status: 503 });
     }
 
-    throw lastError || new Error('Translation failed');
+    const result = await translateSubtitle(sanitizeInput(text), targetLang as TargetLang, apiKey);
+    return NextResponse.json(result);
   } catch (err) {
     console.error('Translation error:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'Translation failed' }, { status: 500 });

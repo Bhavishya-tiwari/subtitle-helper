@@ -1,84 +1,108 @@
-const DEFAULT_BACKEND_URL = 'http://localhost:9333';
-const MAX_TEXT_LENGTH = 500;
+import {
+  BACKEND_URLS,
+  DEFAULT_TARGET_LANG,
+  FETCH_TIMEOUT_MS,
+  MAX_TEXT_LENGTH
+} from './config.js';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'translate') {
-    handleTranslate(message.text, sender.tab?.id, message.requestId);
+  if (message.action !== 'translate') {
+    return false;
   }
+
+  handleTranslate(message.text, sender.tab?.id, message.requestId)
+    .then((result) => sendResponse(result))
+    .catch((err) => sendResponse({ ok: false, error: err.message || 'Translation failed' }));
+
   return true;
 });
 
 async function handleTranslate(text, tabId, requestId) {
-  const notifyError = () => {
-    if (tabId) {
-      chrome.tabs.sendMessage(tabId, { action: 'translationError', requestId });
-    }
-  };
-
   if (!text || typeof text !== 'string') {
-    notifyError();
-    return;
+    return fail(tabId, requestId, 'Missing subtitle text');
   }
 
   if (text.length > MAX_TEXT_LENGTH) {
     text = text.slice(0, MAX_TEXT_LENGTH);
   }
 
-  const config = await chrome.storage.local.get(['backendUrl', 'targetLang', 'enabled']);
-
+  const config = await chrome.storage.local.get(['targetLang', 'enabled']);
   if (config.enabled === false) {
-    notifyError();
-    return;
+    return fail(tabId, requestId, 'Translation is disabled');
   }
 
-  const backendUrl = config.backendUrl || DEFAULT_BACKEND_URL;
-  const targetLang = config.targetLang || 'hi';
   const originalText = sanitizeText(text);
-
   if (!originalText) {
-    notifyError();
-    return;
+    return fail(tabId, requestId, 'Subtitle text was empty');
   }
 
-  try {
-    const response = await fetch(`${backendUrl}/api/translate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        text: originalText,
-        targetLang: targetLang
-      })
-    });
+  const targetLang = config.targetLang || DEFAULT_TARGET_LANG;
+  let lastError = 'Cannot reach backend';
 
-    if (!response.ok) {
-      console.error('Translation API error:', response.status);
-      notifyError();
-      return;
-    }
+  for (const backendUrl of BACKEND_URLS) {
+    try {
+      const data = await postTranslate(backendUrl, originalText, targetLang);
+      if (!data.translation) {
+        lastError = 'Backend returned no translation';
+        continue;
+      }
 
-    const data = await response.json();
-
-    if (!tabId) return;
-
-    if (data.translation) {
-      chrome.tabs.sendMessage(tabId, {
-        action: 'translationResult',
-        requestId,
+      const result = {
+        ok: true,
         data: {
           original: originalText,
           translation: data.translation,
           meaning: data.meaning || ''
         }
-      });
-    } else {
-      notifyError();
+      };
+      notifyTab(tabId, { action: 'translationResult', requestId, data: result.data });
+      return result;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      console.error('Translation request failed:', lastError);
     }
-  } catch (err) {
-    console.error('Translation request failed:', err.message);
-    notifyError();
   }
+
+  return fail(tabId, requestId, lastError);
+}
+
+async function postTranslate(backendUrl, text, targetLang) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${backendUrl}/api/translate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, targetLang }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Backend ${response.status}`);
+    }
+
+    return response.json();
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      throw new Error('Backend timed out');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function fail(tabId, requestId, error) {
+  notifyTab(tabId, { action: 'translationError', requestId, error });
+  return { ok: false, error };
+}
+
+function notifyTab(tabId, payload) {
+  if (!tabId) return;
+  chrome.tabs.sendMessage(tabId, payload, () => {
+    void chrome.runtime.lastError;
+  });
 }
 
 function sanitizeText(text) {
@@ -90,10 +114,8 @@ function sanitizeText(text) {
 
 chrome.runtime.onInstalled.addListener(async () => {
   const stored = await chrome.storage.local.get(['enabled', 'targetLang']);
-
   chrome.storage.local.set({
     enabled: stored.enabled !== false,
-    targetLang: stored.targetLang || 'hi',
-    backendUrl: DEFAULT_BACKEND_URL
+    targetLang: stored.targetLang || DEFAULT_TARGET_LANG
   });
 });

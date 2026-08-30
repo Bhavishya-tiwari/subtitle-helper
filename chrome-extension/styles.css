@@ -82,6 +82,11 @@
   font-style: italic;
 }
 
+.st-error {
+  color: #fbbf24;
+  font-style: normal;
+}
+
 .st-toast {
   position: fixed;
   bottom: 160px;

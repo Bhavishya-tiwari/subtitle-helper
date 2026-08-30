@@ -3,7 +3,6 @@
   let overlayElement = null;
   let isTranslating = false;
   let activeRequestId = 0;
-
   const SUBTITLE_SELECTORS = [
     // YouTube
     '.ytp-caption-segment',
@@ -23,13 +22,6 @@
   ];
 
   function init() {
-    // Restore native subtitles if an older version hid them
-    document.querySelectorAll('style[data-subtitle-helper]').forEach((el) => {
-      if (el.textContent.includes('player-timedtext-text-container')) {
-        el.remove();
-      }
-    });
-
     chrome.storage.local.get(['enabled'], (result) => {
       enabled = result.enabled !== false;
     });
@@ -42,10 +34,6 @@
         enabled = message.enabled;
       }
 
-      if (message.action === 'translateNow') {
-        triggerTranslation();
-      }
-
       if (message.action === 'translationResult') {
         if (message.requestId !== activeRequestId) return;
         isTranslating = false;
@@ -55,8 +43,7 @@
       if (message.action === 'translationError') {
         if (message.requestId !== activeRequestId) return;
         isTranslating = false;
-        hideOverlay();
-        showToast('Translation failed. Check backend is running.');
+        showErrorOverlay(message.error || 'Translation failed');
       }
     });
   }
@@ -254,7 +241,7 @@
     const timeoutId = setTimeout(() => {
       if (isTranslating && requestId === activeRequestId) {
         isTranslating = false;
-        showToast('Translation timed out. Reload the extension and try again.');
+        showErrorOverlay('Timed out. Reload the extension, then refresh this tab.');
       }
     }, 20000);
 
@@ -264,12 +251,24 @@
         text: subtitleText,
         requestId
       },
-      () => {
+      (response) => {
+        if (requestId !== activeRequestId) return;
+        clearTimeout(timeoutId);
+
         if (chrome.runtime.lastError) {
-          clearTimeout(timeoutId);
           isTranslating = false;
-          showToast('Extension error. Reload extension and refresh this tab.');
+          showErrorOverlay('Extension reloaded. Refresh this tab and press \' again.');
           console.error(chrome.runtime.lastError.message);
+          return;
+        }
+
+        if (!response) return;
+
+        isTranslating = false;
+        if (response.ok && response.data) {
+          showOverlay(response.data);
+        } else {
+          showErrorOverlay(response.error || 'Translation failed');
         }
       }
     );
@@ -320,6 +319,18 @@
       </div>
     `;
     overlay.style.display = 'flex';
+  }
+
+  function showErrorOverlay(message) {
+    const overlay = createOverlay();
+    overlay.innerHTML = `
+      <div class="st-overlay-content">
+        <div class="st-translation st-error">${escapeHtml(message)}</div>
+      </div>
+      <button class="st-close-btn">&times;</button>
+    `;
+    overlay.style.display = 'flex';
+    overlay.querySelector('.st-close-btn').addEventListener('click', hideOverlay);
   }
 
   function showOverlay(data) {

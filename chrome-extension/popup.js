@@ -1,16 +1,13 @@
-const DEFAULT_BACKEND_URL = 'http://localhost:9333';
+import { BACKEND_URL, DEFAULT_TARGET_LANG } from './config.js';
 
 const toggleEnabled = document.getElementById('toggleEnabled');
 const targetLang = document.getElementById('targetLang');
 const testConnection = document.getElementById('testConnection');
 const connectionResult = document.getElementById('connectionResult');
 
-let backendUrl = DEFAULT_BACKEND_URL;
-
-chrome.storage.local.get(['enabled', 'targetLang', 'backendUrl'], (result) => {
+chrome.storage.local.get(['enabled', 'targetLang'], (result) => {
   toggleEnabled.checked = result.enabled !== false;
-  targetLang.value = result.targetLang || 'hi';
-  backendUrl = result.backendUrl || DEFAULT_BACKEND_URL;
+  targetLang.value = result.targetLang || DEFAULT_TARGET_LANG;
 });
 
 toggleEnabled.addEventListener('change', () => {
@@ -32,7 +29,7 @@ testConnection.addEventListener('click', async () => {
   connectionResult.classList.remove('hidden', 'text-green-400', 'text-red-400');
 
   try {
-    const response = await fetch(`${backendUrl}/api/health`);
+    const response = await fetch(`${BACKEND_URL}/api/health`);
     if (response.ok) {
       connectionResult.textContent = 'Connected';
       connectionResult.classList.add('text-green-400');
