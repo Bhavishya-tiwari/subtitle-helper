@@ -17,5 +17,5 @@ export const FETCH_TIMEOUT_MS = 20_000;
 export const DEFAULT_TARGET_LANG = 'hi';
 
 // Public values from Supabase → Project Settings → API
-export const SUPABASE_URL = '';
-export const SUPABASE_ANON_KEY = '';
+export const SUPABASE_URL = 'https://xpvbwytkeieldhvzdqrg.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhwdmJ3eXRrZWllbGRodnpkcXJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNzkyMDksImV4cCI6MjEwMzY1NTIwOX0.Sn_WS34418WwbUQfsfUUjAdD8l-aoZRUN0p74JmGgkI';
