@@ -6,76 +6,96 @@
   <title>Subtitle Translator</title>
   <link rel="stylesheet" href="popup.css">
 </head>
-<body class="w-80 bg-gray-900 text-white font-sans overflow-y-auto">
-  <div class="p-3">
-    <div class="flex items-center gap-2 mb-3">
-      <div class="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center text-xs font-bold">ST</div>
-      <h1 class="text-sm font-semibold">Subtitle Translator</h1>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="32" height="32">
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#818cf8"/>
+              <stop offset="1" stop-color="#4338ca"/>
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="8" fill="url(#logoGrad)"/>
+          <rect x="6.5" y="11" width="19" height="3.6" rx="1.8" fill="#fff"/>
+          <rect x="6.5" y="17.4" width="12" height="3.6" rx="1.8" fill="#fff" opacity="0.7"/>
+        </svg>
+      </div>
+      <div class="hero-text">
+        <h1>Subtitle Translator</h1>
+        <p class="tagline">On-demand caption translations</p>
+      </div>
+      <label class="enable" title="Enable translations">
+        <span class="enable-label">Enable</span>
+        <input type="checkbox" id="toggleEnabled" class="sr-only peer" checked>
+        <div class="toggle relative w-11 h-6 bg-gray-600 rounded-full peer-checked:bg-indigo-500 transition-colors">
+          <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+        </div>
+      </label>
+    </header>
+
+    <p class="desc">
+      Press <span class="hl">hotkey</span> on a video with captions to see a translation and a short meaning.
+    </p>
+
+    <div id="signedOut" class="auth-banner hidden">
+      <button id="signIn" class="btn-google" type="button">
+        <svg class="g-icon" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Sign in with Google
+      </button>
+      <p id="authError" class="error hidden"></p>
     </div>
 
-    <div id="authCard" class="card mb-3">
-      <div id="signedOut" class="hidden">
-        <p class="text-xs text-center text-gray-400 mb-2">Sign in to translate subtitles</p>
-        <button id="signIn" class="btn w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1 rounded transition-colors">
-          Sign in with Google
-        </button>
-        <p id="authError" class="text-xs text-center mt-2 text-red-400 hidden"></p>
+    <div id="signedIn" class="account hidden">
+      <div class="account-row">
+        <span id="userEmail" class="email"></span>
+        <button id="signOut" class="link-btn" type="button">Sign out</button>
       </div>
-      <div id="signedIn" class="hidden">
-        <div class="row">
-          <div class="field field-grow">
-            <span class="label">Signed in</span>
-            <p id="userEmail" class="text-xs text-gray-300 truncate"></p>
-          </div>
-          <div class="field field-right">
-            <span class="label">&nbsp;</span>
-            <button id="signOut" class="btn bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium px-3 py-1 rounded transition-colors">
-              Sign out
-            </button>
-          </div>
-        </div>
-      </div>
+      <p id="quotaLine" class="quota hidden"></p>
     </div>
 
-    <div class="card">
-      <div class="row">
-        <div class="field">
-          <span class="label">Hotkey</span>
-          <kbd class="kbd">'</kbd>
+    <section id="settings" class="settings">
+      <div class="setting">
+        <div class="setting-copy">
+          <span class="setting-title">Shortcut</span>
+          <span class="setting-sub setting-sub-on"><span class="hl">Hotkey</span> on any captioned video</span>
         </div>
-        <label class="field field-right cursor-pointer">
-          <span class="label">Enable</span>
-          <input type="checkbox" id="toggleEnabled" class="sr-only peer" checked>
-          <div class="toggle relative w-11 h-6 bg-gray-600 rounded-full peer-checked:bg-indigo-500 transition-colors">
-            <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
-          </div>
-        </label>
+        <kbd class="kbd" title="Translate hotkey">'</kbd>
       </div>
 
-      <div class="row mt-3">
-        <div class="field field-grow">
-          <span class="label">Language</span>
-          <select id="targetLang" class="select bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-indigo-500">
-            <option value="hi">Hindi</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="ja">Japanese</option>
-            <option value="ko">Korean</option>
-            <option value="zh">Chinese</option>
-            <option value="pt">Portuguese</option>
-            <option value="ar">Arabic</option>
-            <option value="ru">Russian</option>
-          </select>
+      <div class="setting">
+        <div class="setting-copy">
+          <span class="setting-title">Target language</span>
         </div>
-        <div class="field field-right">
-          <span class="label">&nbsp;</span>
-          <button id="testConnection" class="btn bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1 rounded transition-colors">
-            Test
-          </button>
-        </div>
+        <select id="targetLang" class="select">
+          <option value="hi">Hindi</option>
+          <option value="es">Spanish</option>
+          <option value="fr">French</option>
+          <option value="de">German</option>
+          <option value="ja">Japanese</option>
+          <option value="ko">Korean</option>
+          <option value="zh">Chinese</option>
+          <option value="pt">Portuguese</option>
+          <option value="ar">Arabic</option>
+          <option value="ru">Russian</option>
+        </select>
       </div>
-      <p id="connectionResult" class="text-xs text-center mt-2 hidden"></p>
+    </section>
+
+    <div class="platforms" aria-label="Supported services">
+      <ul class="platform-list">
+        <li class="platform-yt" title="YouTube"><img src="brands/yt.png" alt="YouTube"></li>
+        <li title="Netflix"><img src="brands/netflix.png" alt="Netflix"></li>
+        <li title="JioHotstar"><img src="brands/hotstar.png" alt="JioHotstar"></li>
+        <li class="platform-prime" title="Prime Video"><img src="brands/prime.png" alt="Prime Video"></li>
+        <li title="Sony LIV"><img src="brands/sonyliv.png" alt="Sony LIV"></li>
+      </ul>
     </div>
   </div>
 

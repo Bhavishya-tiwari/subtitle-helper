@@ -7,18 +7,20 @@ export type QuotaResult = {
   remaining: number;
 };
 
-export async function consumeAiQuota(accessToken: string): Promise<QuotaResult> {
+function supabaseForUser(accessToken: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   if (!url || !anonKey) {
     throw new Error('Supabase is not configured');
   }
 
-  const supabase = createClient(url, anonKey, {
+  return createClient(url, anonKey, {
     global: { headers: { Authorization: `Bearer ${accessToken}` } }
   });
+}
 
-  const { data, error } = await supabase.rpc('consume_ai_quota');
+async function callQuotaRpc(accessToken: string, fn: 'consume_ai_quota' | 'get_ai_quota') {
+  const { data, error } = await supabaseForUser(accessToken).rpc(fn);
   if (error) {
     throw new Error(error.message);
   }
@@ -29,6 +31,14 @@ export async function consumeAiQuota(accessToken: string): Promise<QuotaResult> 
   }
 
   return quota;
+}
+
+export async function consumeAiQuota(accessToken: string): Promise<QuotaResult> {
+  return callQuotaRpc(accessToken, 'consume_ai_quota');
+}
+
+export async function getAiQuota(accessToken: string): Promise<QuotaResult> {
+  return callQuotaRpc(accessToken, 'get_ai_quota');
 }
 
 export function secondsUntilUtcMidnight(): number {

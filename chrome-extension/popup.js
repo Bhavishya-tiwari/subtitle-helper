@@ -10,12 +10,43 @@ const userEmail = document.getElementById('userEmail');
 const signIn = document.getElementById('signIn');
 const signOut = document.getElementById('signOut');
 const authError = document.getElementById('authError');
+const quotaLine = document.getElementById('quotaLine');
 
 function renderSession(session) {
-  const email = session?.user?.email;
+  const email = session?.user?.email || '';
   signedIn.classList.toggle('hidden', !email);
   signedOut.classList.toggle('hidden', Boolean(email));
-  userEmail.textContent = email || '';
+  userEmail.textContent = email;
+  if (email) {
+    loadQuota(session);
+  } else {
+    quotaLine.classList.add('hidden');
+    quotaLine.textContent = '';
+  }
+}
+
+async function loadQuota(session) {
+  const token = session?.access_token;
+  if (!token) {
+    quotaLine.classList.add('hidden');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/quota`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || typeof data.remaining !== 'number') {
+      quotaLine.classList.add('hidden');
+      return;
+    }
+
+    quotaLine.textContent = `${data.remaining} of ${data.limit} translations left today`;
+    quotaLine.classList.remove('hidden');
+  } catch {
+    quotaLine.classList.add('hidden');
+  }
 }
 
 chrome.storage.local.get(['enabled', 'targetLang', 'session'], (result) => {
